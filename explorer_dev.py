@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """
-HelioAtlas — Jupiter/Mars/Saturn opposition/conjunction visualiser (interactive)
+HelioAtlas Jupiter/Mars/Saturn opposition/conjunction visualiser (interactive)
 Classic Ecliptic View + Dynamic View Limits + Per-planet visibility control
 
 Fixes included:
 - Restores full Fig 2 + slider UI (ax2/ax2b/etc. are defined).
-- Fixes BUG: Mars event markers were incorrectly registered to Jupiter.
+- Fixes : Mars event markers were incorrectly registered to Jupiter.
 - Legend + readout box only show enabled planets.
 - Dynamic view limits: plot framing uses the outermost enabled planet (Earth always included).
 """
@@ -41,11 +41,15 @@ from config import *
 from geometry import (
     ensure_utc,
     horizons_times_to_utc,
-    angle_deg_vectorized,
-    _fill_zero_signs
+    angle_deg_vectorized
+
 )
 
 from horizons import *
+
+from events import (
+    find_conj_opp_events
+)
 
 # -------------------- Helpers --------------------
 def maximize_figure(fig):
@@ -62,28 +66,6 @@ def maximize_figure(fig):
             return
     except Exception:
         pass
-
-
-def find_conj_opp_events(elong_deg: np.ndarray, conj_thresh_deg: float = 10.0, opp_thresh_deg: float = 170.0):
-    """Find conjunction (local minima near 0°) and opposition (local maxima near 180°) indices."""
-    e = np.asarray(elong_deg, dtype=float)
-    d = np.diff(e)
-    s = np.sign(d)
-    s = _fill_zero_signs(s)
-
-    mins = np.where((s[:-1] < 0) & (s[1:] > 0))[0] + 1
-    maxs = np.where((s[:-1] > 0) & (s[1:] < 0))[0] + 1
-
-    conj = [int(i) for i in mins if np.isfinite(e[i]) and e[i] <= conj_thresh_deg]
-    opp  = [int(i) for i in maxs if np.isfinite(e[i]) and e[i] >= opp_thresh_deg]
-
-    if len(conj) == 0 and np.isfinite(e).any():
-        conj = [int(np.nanargmin(np.abs(e - 0.0)))]
-    if len(opp) == 0 and np.isfinite(e).any():
-        opp = [int(np.nanargmin(np.abs(e - 180.0)))]
-
-    return sorted(set(conj)), sorted(set(opp))
-
 
 def compute_view_lim(planet_enabled_map=None):
     """Dynamic plot limits based on the outermost enabled planet.
@@ -124,66 +106,6 @@ def _mask_to_spans(mask: np.ndarray):
     return spans
 
 
-# -------------------- HORIZONS fetch --------------------
-"""
-def fetch_heliocentric_xyz_majorbody(naif_id: str) -> pd.DataFrame:
-    obj = Horizons(id=str(naif_id), id_type="majorbody", location="@sun",
-                   epochs={"start": START, "stop": STOP, "step": STEP})
-    tbl = obj.vectors(refplane="ecliptic")
-    df = tbl.to_pandas()
-
-    df["t"] = ensure_utc(horizons_times_to_utc(tbl))
-    return df[["t", "x", "y", "z"]].sort_values("t").reset_index(drop=True)
-
-
-
-def build_dataset() -> pd.DataFrame:
-    base = pd.DataFrame({
-        "t": pd.date_range(
-            pd.Timestamp(START).tz_localize("UTC"),
-            pd.Timestamp(STOP).tz_localize("UTC"),
-            freq="1D"
-        )
-    }).sort_values("t").reset_index(drop=True)
-
-    earth_hc   = fetch_heliocentric_xyz_majorbody("399")
-    jupiter_hc = fetch_heliocentric_xyz_majorbody("599")
-    mars_hc    = fetch_heliocentric_xyz_majorbody("499")
-    saturn_hc  = fetch_heliocentric_xyz_majorbody("699")
-
-    def asof_align(df_base: pd.DataFrame, df_src: pd.DataFrame, suffix: str) -> pd.DataFrame:
-        left = df_base[["t"]].copy()
-        right = df_src[["t", "x", "y", "z"]].copy().sort_values("t")
-        out = pd.merge_asof(left.sort_values("t"), right, on="t",
-                            direction="nearest", tolerance=pd.Timedelta("12h"))
-        out = out.add_suffix(suffix)
-        out.rename(columns={f"t{suffix}": "t"}, inplace=True)
-        return out
-
-    aE = asof_align(base, earth_hc, "_E")
-    aJ = asof_align(base, jupiter_hc, "_J")
-    aM = asof_align(base, mars_hc, "_M")
-    aS = asof_align(base, saturn_hc, "_S")
-
-    df = aE.merge(aJ, on="t").merge(aM, on="t").merge(aS, on="t").dropna().reset_index(drop=True)
-
-    # Distances (Earth->planet)
-    df["earth_jupiter_range_AU"] = np.sqrt((df["x_J"] - df["x_E"])**2 + (df["y_J"] - df["y_E"])**2 + (df["z_J"] - df["z_E"])**2)
-    df["earth_mars_range_AU"]    = np.sqrt((df["x_M"] - df["x_E"])**2 + (df["y_M"] - df["y_E"])**2 + (df["z_M"] - df["z_E"])**2)
-    df["earth_saturn_range_AU"]  = np.sqrt((df["x_S"] - df["x_E"])**2 + (df["y_S"] - df["y_E"])**2 + (df["z_S"] - df["z_E"])**2)
-
-    # Earth-based elongations: angle between (Earth->Sun) and (Earth->Planet)
-    df["jup_elong_deg"] = angle_deg_vectorized(-df["x_E"], -df["y_E"], -df["z_E"], df["x_J"] - df["x_E"], df["y_J"] - df["y_E"], df["z_J"] - df["z_E"])
-    df["mars_elong_deg"] = angle_deg_vectorized(-df["x_E"], -df["y_E"], -df["z_E"], df["x_M"] - df["x_E"], df["y_M"] - df["y_E"], df["z_M"] - df["z_E"])
-    df["sat_elong_deg"] = angle_deg_vectorized(-df["x_E"], -df["y_E"], -df["z_E"], df["x_S"] - df["x_E"], df["y_S"] - df["y_E"], df["z_S"] - df["z_E"])
-
-    # Sun-centered separation angles for reference: angle(r_E, r_P)
-    df["helio_sep_J_deg"] = angle_deg_vectorized(df["x_E"], df["y_E"], df["z_E"], df["x_J"], df["y_J"], df["z_J"])
-    df["helio_sep_M_deg"] = angle_deg_vectorized(df["x_E"], df["y_E"], df["z_E"], df["x_M"], df["y_M"], df["z_M"])
-    df["helio_sep_S_deg"] = angle_deg_vectorized(df["x_E"], df["y_E"], df["z_E"], df["x_S"], df["y_S"], df["z_S"])
-
-    return df
-"""
 
 # -------------------- Plot + slider --------------------
 def main():

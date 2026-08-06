@@ -54,18 +54,6 @@ def angle_deg_vectorized(u_x, u_y, u_z, v_x, v_y, v_z):
     cosang[nu * nv == 0] = np.nan
     return np.degrees(np.arccos(cosang))
 
-    
-
-def _fill_zero_signs(s: np.ndarray) -> np.ndarray:
-    s = s.astype(float)
-    for i in range(1, len(s)):
-        if s[i] == 0:
-            s[i] = s[i-1]
-    for i in range(len(s)-2, -1, -1):
-        if s[i] == 0:
-            s[i] = s[i+1]
-    return s
-
 
 def orbit_plot_limit(
     enabled,
