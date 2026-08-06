@@ -45,6 +45,8 @@ from geometry import (
     _fill_zero_signs
 )
 
+from horizons import *
+
 # -------------------- Helpers --------------------
 def maximize_figure(fig):
     """Best-effort maximize (Windows; works for many Tk/Qt backends)."""
@@ -123,6 +125,7 @@ def _mask_to_spans(mask: np.ndarray):
 
 
 # -------------------- HORIZONS fetch --------------------
+"""
 def fetch_heliocentric_xyz_majorbody(naif_id: str) -> pd.DataFrame:
     obj = Horizons(id=str(naif_id), id_type="majorbody", location="@sun",
                    epochs={"start": START, "stop": STOP, "step": STEP})
@@ -131,6 +134,7 @@ def fetch_heliocentric_xyz_majorbody(naif_id: str) -> pd.DataFrame:
 
     df["t"] = ensure_utc(horizons_times_to_utc(tbl))
     return df[["t", "x", "y", "z"]].sort_values("t").reset_index(drop=True)
+
 
 
 def build_dataset() -> pd.DataFrame:
@@ -179,7 +183,7 @@ def build_dataset() -> pd.DataFrame:
     df["helio_sep_S_deg"] = angle_deg_vectorized(df["x_E"], df["y_E"], df["z_E"], df["x_S"], df["y_S"], df["z_S"])
 
     return df
-
+"""
 
 # -------------------- Plot + slider --------------------
 def main():
@@ -498,7 +502,10 @@ def main():
                frameon=True, facecolor="black", edgecolor="white",
                fontsize=8, labelcolor="white")
 
+         
+
     # ---------- Slider + Reset ----------
+
     slider_ax = fig1.add_axes([0.12, 0.06, 0.76, 0.03], facecolor="#222")
     slider = Slider(slider_ax, "", 0, MAX_IDX, valinit=i0, valstep=1)
     slider.valtext.set_color("white")
