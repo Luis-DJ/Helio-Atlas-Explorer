@@ -63,8 +63,37 @@ from plotting import (
     draw_current_markers,
     draw_events,
     draw_connectors,
-    compute_view_lim,
-    build_figure2)
+    compute_view_lim)
+
+# -------------------- Helpers --------------------
+
+
+#def compute_view_lim(planet_enabled_map=None):
+#    """Dynamic plot limits based on the outermost enabled planet.
+ #   Earth is always included so the frame never collapses.
+   
+"""
+    if planet_enabled_map is None:
+        planet_enabled_map = {}
+
+    radii = [EARTH_ORBIT_AU]
+
+    def _on(name: str, default: bool) -> bool:
+        if isinstance(planet_enabled_map, dict):
+            return bool(planet_enabled_map.get(name, default))
+        return bool(default)
+
+    if _on("Mars", SHOW_PLANET_MARS):
+        radii.append(MARS_ORBIT_AU)
+    if _on("Jupiter", SHOW_PLANET_JUPITER):
+        radii.append(JUPITER_ORBIT_AU)
+    if _on("Saturn", SHOW_PLANET_SATURN):
+        radii.append(SATURN_ORBIT_AU)
+
+    outer = max(radii) if radii else JUPITER_ORBIT_AU
+    return max(1.8, outer * 1.08)
+
+"""
 
 # -------------------- Plot + slider --------------------
 def main():
@@ -112,7 +141,11 @@ def main():
             else:
                 planet_artists[planet].append(a)
 
+
+
     refresh_legend(ax1)
+
+
 
     def apply_planet_visibility():
         for planet, artists in planet_artists.items():
@@ -155,6 +188,16 @@ def main():
 
     lineEM, lineEJ, lineES = draw_connectors(ax1, df, _reg, i0)
 
+    """
+    lineEM = ax1.plot([df["x_E"].iloc[i0], df["x_M"].iloc[i0]], [df["y_E"].iloc[i0], df["y_M"].iloc[i0]],
+                      color="white", alpha=0.55, lw=CONNECTOR_LW_USABLE, zorder=5)[0]
+    lineEJ = ax1.plot([df["x_E"].iloc[i0], df["x_J"].iloc[i0]], [df["y_E"].iloc[i0], df["y_J"].iloc[i0]],
+                      color="white", alpha=0.65, lw=CONNECTOR_LW_USABLE, zorder=5)[0]
+    lineES = ax1.plot([df["x_E"].iloc[i0], df["x_S"].iloc[i0]], [df["y_E"].iloc[i0], df["y_S"].iloc[i0]],
+                      color="white", alpha=0.45, lw=CONNECTOR_LW_USABLE, zorder=5)[0]
+
+    """
+
     _reg("Mars", lineEM)
     _reg("Jupiter", lineEJ)
     _reg("Saturn", lineES)
@@ -190,8 +233,53 @@ def main():
     )
 
     # ---------- FIG 2: Range + Elongation ----------
+    fig2, ax2 = plt.subplots(figsize=(12.5, 4.8), num=f"{APP_NAME} {APP_VERSION} — Ranges & Elongation")
+    fig2.patch.set_facecolor(BACKGROUND_COLOR)
+    ax2.set_facecolor(BACKGROUND_COLOR)
 
-    fig2, ax2, ax2b = build_figure2(planet_enabled, days, df)
+    # Secondary axis for elongation
+    ax2b = ax2.twinx()
+    ax2b.set_facecolor(BACKGROUND_COLOR)
+
+    # Ranges
+    if planet_enabled["Jupiter"]:
+        ax2.plot(days, df["earth_jupiter_range_AU"], lw=1.8, alpha=0.9, label="Earth–Jupiter range (AU)")
+    if planet_enabled["Mars"]:
+        ax2.plot(days, df["earth_mars_range_AU"], lw=1.6, alpha=0.9, label="Earth–Mars range (AU)")
+    if planet_enabled["Saturn"]:
+        ax2.plot(days, df["earth_saturn_range_AU"], lw=1.6, alpha=0.9, label="Earth–Saturn range (AU)")
+
+    # Elongations (simple single-line per planet; keep your banding if you want later)
+    if planet_enabled["Jupiter"]:
+        ax2b.plot(days, df["jup_elong_deg"], lw=1.4, alpha=0.9, label="Jupiter elongation (deg)")
+    if planet_enabled["Mars"]:
+        ax2b.plot(days, df["mars_elong_deg"], lw=1.2, alpha=0.9, label="Mars elongation (deg)")
+    if planet_enabled["Saturn"]:
+        ax2b.plot(days, df["sat_elong_deg"], lw=1.2, alpha=0.9, label="Saturn elongation (deg)")
+
+    ax2.set_xlabel("Date", color="white")
+    ax2.set_ylabel("Range (AU)", color="white")
+    ax2b.set_ylabel("Elongation (deg)", color="white")
+
+    ax2.tick_params(axis="x", colors="white")
+    ax2.tick_params(axis="y", colors="white")
+    ax2b.tick_params(axis="y", colors="white")
+    ax2.grid(True, ls=":", alpha=0.25, color="white")
+
+    # Solar glare shading (any enabled planet under DIFFICULT threshold)
+    if SHOW_SOLAR_GLARE_MASK:
+        glare_mask = np.zeros(len(df), dtype=bool)
+        if planet_enabled["Mars"]:
+            glare_mask |= (df["mars_elong_deg"].to_numpy() < ELONG_DIFFICULT_DEG)
+        if planet_enabled["Jupiter"]:
+            glare_mask |= (df["jup_elong_deg"].to_numpy() < ELONG_DIFFICULT_DEG)
+        if planet_enabled["Saturn"]:
+            glare_mask |= (df["sat_elong_deg"].to_numpy() < ELONG_DIFFICULT_DEG)
+
+        glare_spans = _mask_to_spans(glare_mask)
+        for a, b in glare_spans:
+            ax2.axvspan(days.iloc[a], days.iloc[b], color=GLARE_SHADE_COLOR, alpha=GLARE_SHADE_ALPHA, zorder=0)
+        ax2b.axhline(float(GLARE_SHADE_BELOW_DEG), color=GLARE_SHADE_COLOR, lw=1.0, alpha=0.35)
 
     # Vertical time cursor
     vline = ax2.axvline(days.iloc[i0], ls=":", color="white", alpha=0.9)
@@ -202,6 +290,8 @@ def main():
     ax2.legend(h1 + h2, l1 + l2, loc="upper right",
                frameon=True, facecolor="black", edgecolor="white",
                fontsize=8, labelcolor="white")
+
+         
 
     # ---------- Slider + Reset ----------
 
