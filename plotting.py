@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-
 import numpy as np
 import matplotlib.pyplot as plt
 from config import *
-
-
 
 import sys
 import matplotlib
 import numpy as np
 import pandas as pd
 from astropy.time import Time
-
 
 # Helper functions
 
@@ -126,7 +122,6 @@ def style_connector(line, elong_deg: float):
     else:
         line.set_alpha(0.75); line.set_color("lime"); line.set_linestyle("solid"); line.set_linewidth(CONNECTOR_LW_EXCELLENT)
 
-
 def make_readout_text(i, dates, planet_enabled, df ):
     d = dates.iloc[i].strftime("%d-%b-%Y")
     parts = [f"Date: {d}"]
@@ -162,7 +157,7 @@ def make_readout_text(i, dates, planet_enabled, df ):
 
 # Orbit drawings
 
-def draw_guide_orbits(ax, theta, planet_enabled, reg):
+def draw_guide_orbits(ax, theta, planet_enabled, planet_artists):
     """
     Draw the reference circular orbits for the enabled planets.
     """
@@ -187,7 +182,7 @@ def draw_guide_orbits(ax, theta, planet_enabled, reg):
             lw=1.0,
             label=f"Mars orbit ({MARS_ORBIT_AU:.3f} AU)",
         )[0]
-        reg("Mars", h)
+        register_artists(planet_artists,"Mars", h)
 
     if planet_enabled["Jupiter"]:
         h = ax.plot(
@@ -199,7 +194,7 @@ def draw_guide_orbits(ax, theta, planet_enabled, reg):
             lw=1.0,
             label=f"Jupiter orbit ({JUPITER_ORBIT_AU:.3f} AU)",
         )[0]
-        reg("Jupiter", h)
+        register_artists(planet_artists, "Jupiter", h)
 
     if planet_enabled["Saturn"]:
         h = ax.plot(
@@ -211,26 +206,24 @@ def draw_guide_orbits(ax, theta, planet_enabled, reg):
             lw=1.0,
             label=f"Saturn orbit ({SATURN_ORBIT_AU:.3f} AU)",
         )[0]
-        reg("Saturn", h)
-
+        register_artists(planet_artists,"Saturn", h)
 
 def draw_sun(ax):
     
     ax.scatter([0], [0], s=SUN_GLOW_SIZE, color=SUN_GLOW_COLOR, alpha=0.22, zorder=3)
     ax.scatter([0], [0], s=SUN_CORE_SIZE, color=SUN_CORE_COLOR, edgecolor="white", label="Sun", zorder=4)
 
-
-def draw_planet_tracks(ax, df, _reg):
+def draw_planet_tracks(ax, df, planet_artists):
 
     ax.plot(df["x_E"], df["y_E"], color=EARTH_COLOR, lw=1.5, alpha=0.55, label="Earth (HORIZONS)")
     mars_track = ax.plot(df["x_M"], df["y_M"], color=MARS_COLOR, lw=1.8, alpha=0.50, label="Mars (HORIZONS)")[0]
     jup_track  = ax.plot(df["x_J"], df["y_J"], color=JUPITER_COLOR, lw=2.0, alpha=0.55, label="Jupiter (HORIZONS)")[0]
     sat_track  = ax.plot(df["x_S"], df["y_S"], color=SATURN_COLOR, lw=2.0, alpha=0.45, label="Saturn (HORIZONS)")[0]
-    _reg("Mars", mars_track)
-    _reg("Jupiter", jup_track)
-    _reg("Saturn", sat_track)
+    register_artists(planet_artists,"Mars", mars_track)
+    register_artists(planet_artists,"Jupiter", jup_track)
+    register_artists(planet_artists,"Saturn", sat_track)
 
-def draw_current_markers(ax, df, i0, _reg):
+def draw_current_markers(ax, df, i0, planet_artists):
     E = ax.scatter([df["x_E"].iloc[i0]], [df["y_E"].iloc[i0]], s=EARTH_SIZE, color=EARTH_COLOR, edgecolor="white",
                     label="_nolegend_", zorder=6)
     M = ax.scatter([df["x_M"].iloc[i0]], [df["y_M"].iloc[i0]], s=MARS_SIZE, color=MARS_COLOR, edgecolor="white",
@@ -239,56 +232,56 @@ def draw_current_markers(ax, df, i0, _reg):
                     label="_nolegend_", zorder=6)
     S = ax.scatter([df["x_S"].iloc[i0]], [df["y_S"].iloc[i0]], s=SATURN_SIZE, color=SATURN_COLOR, edgecolor="white",
                     label="_nolegend_", zorder=6)
-    _reg("Mars", M)
-    _reg("Jupiter", J)
-    _reg("Saturn", S)
+    register_artists(planet_artists,"Mars", M)
+    register_artists(planet_artists,"Jupiter", J)
+    register_artists(planet_artists,"Saturn", S)
 
     return E, M, J, S
 
 # Event plotting
 
-def draw_events(ax, df, _reg, planet: str, xcol: str, ycol: str, opp_idxs, conj_idxs, size=EVENT_SIZE, fs=8):
+def draw_events(ax, df, planet_artists, planet: str, xcol: str, ycol: str, opp_idxs, conj_idxs, size=EVENT_SIZE, fs=8):
     # Opposition
     for k, ii in enumerate(opp_idxs):
         h = ax.scatter(df[xcol].iloc[ii], df[ycol].iloc[ii],
                         s=size, facecolor="none", edgecolor=EVENT_OPP_COLOR, lw=EVENT_MARKER_LW, zorder=9,
                         label="Opposition" if (planet == "Jupiter" and k == 0) else "_nolegend_")
-        _reg(planet, h)
+        register_artists(planet_artists,planet, h)
         if SHOW_EVENT_LABELS:
             yoff = 0.18 if (k % 2 == 0) else 0.30
             t = ax.text(df[xcol].iloc[ii], df[ycol].iloc[ii] + yoff,
                             f"Opp\n{df['t'].iloc[ii].strftime(DATE_FMT)}",
                             ha="center", va="bottom", fontsize=fs, color="white",
                             bbox=dict(boxstyle="round,pad=0.15", facecolor="black", alpha=0.55, lw=0))
-            _reg(planet, t)
+            register_artists(planet_artists,planet, t)
 
     # Conjunction
     for k, ii in enumerate(conj_idxs):
         h = ax.scatter(df[xcol].iloc[ii], df[ycol].iloc[ii],
                         s=size, facecolor="none", edgecolor=EVENT_CONJ_COLOR, lw=EVENT_MARKER_LW, zorder=9,
                         label="Conjunction" if (planet == "Jupiter" and k == 0) else "_nolegend_")
-        _reg(planet, h)
+        register_artists(planet_artists,planet, h)
         if SHOW_EVENT_LABELS:
             yoff = -0.22 if (k % 2 == 0) else -0.36
             t = ax.text(df[xcol].iloc[ii], df[ycol].iloc[ii] + yoff,
                             f"Conj\n{df['t'].iloc[ii].strftime(DATE_FMT)}",
                             ha="center", va="top", fontsize=fs, color="white",
                             bbox=dict(boxstyle="round,pad=0.15", facecolor="black", alpha=0.55, lw=0))
-            _reg(planet, t)
+            register_artists(planet_artists,planet, t)
 
 
 # Connector plotting
 
-def draw_connectors(ax, df, _reg, i0):
+def draw_connectors(ax, df, planet_artists, i0):
     lineEM = ax.plot([df["x_E"].iloc[i0], df["x_M"].iloc[i0]], [df["y_E"].iloc[i0], df["y_M"].iloc[i0]],
                       color="white", alpha=0.55, lw=CONNECTOR_LW_USABLE, zorder=5)[0]
     lineEJ = ax.plot([df["x_E"].iloc[i0], df["x_J"].iloc[i0]], [df["y_E"].iloc[i0], df["y_J"].iloc[i0]],
                       color="white", alpha=0.65, lw=CONNECTOR_LW_USABLE, zorder=5)[0]
     lineES = ax.plot([df["x_E"].iloc[i0], df["x_S"].iloc[i0]], [df["y_E"].iloc[i0], df["y_S"].iloc[i0]],
                       color="white", alpha=0.45, lw=CONNECTOR_LW_USABLE, zorder=5)[0]
-    _reg("Mars", lineEM)
-    _reg("Jupiter", lineEJ)
-    _reg("Saturn", lineES)
+    register_artists(planet_artists,"Mars", lineEM)
+    register_artists(planet_artists,"Jupiter", lineEJ)
+    register_artists(planet_artists,"Saturn", lineES)
 
     return lineEM, lineEJ, lineES
 
@@ -297,7 +290,6 @@ def draw_connectors(ax, df, _reg, i0):
 #def build_figure2(planet_enabled, days, df):
 
 def build_analysis_figure(planet_enabled, days, df):
-
 
     fig2, ax2 = plt.subplots(figsize=(12.5, 4.8), num=f"{APP_NAME} {APP_VERSION} — Ranges & Elongation")
     fig2.patch.set_facecolor(BACKGROUND_COLOR)
@@ -349,55 +341,20 @@ def build_analysis_figure(planet_enabled, days, df):
 
     return fig2, ax2, ax2b
 
-"""
-def update(
-    val,
-    MAX_IDX,
-    df,
-    days,
-    E, M, J, S,
-    lineEM, lineEJ, lineES,
-    txt,
-    vline,
-    fig1,
-    fig2,
-):
-
-
-    i = int(val)
-    i = max(0, min(MAX_IDX, i))
-
-    # Markers
-    E.set_offsets([[df["x_E"].iloc[i], df["y_E"].iloc[i]]])
-    M.set_offsets([[df["x_M"].iloc[i], df["y_M"].iloc[i]]])
-    J.set_offsets([[df["x_J"].iloc[i], df["y_J"].iloc[i]]])
-    S.set_offsets([[df["x_S"].iloc[i], df["y_S"].iloc[i]]])
-
-    # Connectors
-    lineEM.set_data([df["x_E"].iloc[i], df["x_M"].iloc[i]], [df["y_E"].iloc[i], df["y_M"].iloc[i]])
-    lineEJ.set_data([df["x_E"].iloc[i], df["x_J"].iloc[i]], [df["y_E"].iloc[i], df["y_J"].iloc[i]])
-    lineES.set_data([df["x_E"].iloc[i], df["x_S"].iloc[i]], [df["y_E"].iloc[i], df["y_S"].iloc[i]])
-
-    if SHOW_SOLAR_GLARE_MASK:
-        style_connector(lineEJ, float(df["jup_elong_deg"].iloc[i]))
-        style_connector(lineEM, float(df["mars_elong_deg"].iloc[i]))
-        style_connector(lineES, float(df["sat_elong_deg"].iloc[i]))
-
-    # Readout + view limits + legend
-    txt.set_text(make_readout_text(i))
-    apply_planet_visibility()
-    set_view_limits()
-
-    # Fig2 cursor
-    vline.set_xdata([days.iloc[i], days.iloc[i]])
-
-    fig1.canvas.draw_idle()
-    fig2.canvas.draw_idle()
-
-"""
-
 def set_view_limits(ax1, planet_enabled):
     lim = compute_view_lim(planet_enabled)
     ax1.set_xlim(-lim, lim)
     ax1.set_ylim(-lim, lim)
-     
+
+def register_artists(planet_artists, planet, *artists):
+    if planet not in planet_artists:
+        planet_artists[planet] = []
+    for a in artists:
+        if a is None:
+            continue
+        if isinstance(a, (list, tuple)):
+            for aa in a:
+                if aa is not None:
+                    planet_artists[planet].append(aa)
+        else:
+            planet_artists[planet].append(a)

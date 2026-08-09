@@ -42,7 +42,6 @@ from geometry import (
     ensure_utc,
     horizons_times_to_utc,
     angle_deg_vectorized
-
 )
 
 from horizons import *
@@ -65,11 +64,11 @@ from plotting import (
     draw_connectors,
     compute_view_lim,
     build_analysis_figure,
-    set_view_limits
+    set_view_limits,
+    register_artists
     )
 
 from ui import(apply_planet_visibility, update)
-
 
 #    build_figure2)
 # -------------------- Plot + slider --------------------
@@ -106,6 +105,7 @@ def main():
         "Saturn": bool(SHOW_PLANET_SATURN),
     }
 
+    """
     def _reg(planet: str, *artists):
         if planet not in planet_artists:
             planet_artists[planet] = []
@@ -118,38 +118,15 @@ def main():
                         planet_artists[planet].append(aa)
             else:
                 planet_artists[planet].append(a)
+    """
 
     refresh_legend(ax1)
-
-
-    """
-    def apply_planet_visibility():
-        for planet, artists in planet_artists.items():
-            enabled = planet_enabled.get(planet, True)
-            for a in artists:
-                try:
-                    # If it's a Text label: only show if planet is enabled AND labels enabled
-                    if hasattr(a, "get_text") and not hasattr(a, "get_offsets"):
-                        a.set_visible(bool(enabled) and bool(SHOW_EVENT_LABELS))
-                    else:
-                        a.set_visible(bool(enabled))
-                except Exception:
-                    pass
-        refresh_legend(ax1)
-    """
-
-    """
-    def set_view_limits():
-        lim = compute_view_lim(planet_enabled)
-        ax1.set_xlim(-lim, lim)
-        ax1.set_ylim(-lim, lim)
-    """
 
     theta = np.linspace(0, 2*np.pi, 1200)
 
     # Guide orbits (only for enabled planets)
     
-    draw_guide_orbits(ax1, theta, planet_enabled, _reg)
+    draw_guide_orbits(ax1, theta, planet_enabled, planet_artists)
 
     # Sun
 
@@ -157,18 +134,18 @@ def main():
     
     # Tracks
 
-    draw_planet_tracks(ax1, df, _reg)
+    draw_planet_tracks(ax1, df, planet_artists)
 
     # Current markers
-    E, M, J, S = draw_current_markers(ax1, df, i0, _reg)
+    E, M, J, S = draw_current_markers(ax1, df, i0, planet_artists)
     
     # Connectors
 
-    lineEM, lineEJ, lineES = draw_connectors(ax1, df, _reg, i0)
+    lineEM, lineEJ, lineES = draw_connectors(ax1, df, planet_artists, i0)
 
-    _reg("Mars", lineEM)
-    _reg("Jupiter", lineEJ)
-    _reg("Saturn", lineES)
+    register_artists(planet_artists, "Mars", lineEM)
+    register_artists(planet_artists, "Jupiter", lineEJ)
+    register_artists(planet_artists, "Saturn", lineES)
 
     if SHOW_SOLAR_GLARE_MASK:
         style_connector(lineEJ, float(df["jup_elong_deg"].iloc[i0]))
@@ -178,9 +155,9 @@ def main():
     # Events (rings + optional labels), all registered to the correct planet
                 
     # Jupiter full-size; Mars slightly smaller; Saturn full-size
-    draw_events(ax1, df, _reg, "Jupiter", "x_J", "y_J", j_opp, j_conj, size=EVENT_SIZE, fs=8)
-    draw_events(ax1, df, _reg, "Mars",    "x_M", "y_M", m_opp, m_conj, size=EVENT_SIZE*0.85, fs=7.5)
-    draw_events(ax1, df, _reg, "Saturn",  "x_S", "y_S", s_opp, s_conj, size=EVENT_SIZE, fs=8)
+    draw_events(ax1, df, planet_artists, "Jupiter", "x_J", "y_J", j_opp, j_conj, size=EVENT_SIZE, fs=8)
+    draw_events(ax1, df, planet_artists, "Mars",    "x_M", "y_M", m_opp, m_conj, size=EVENT_SIZE*0.85, fs=7.5)
+    draw_events(ax1, df, planet_artists, "Saturn",  "x_S", "y_S", s_opp, s_conj, size=EVENT_SIZE, fs=8)
 
     ax1.set_aspect("equal")
 
@@ -225,63 +202,12 @@ def main():
     btn_ax = fig1.add_axes([0.90, 0.05, 0.08, 0.05])
     btn = Button(btn_ax, "Reset")
 
-    """
-    def update(val):
-        i = int(val)
-        i = max(0, min(MAX_IDX, i))
-
-        # Markers
-        E.set_offsets([[df["x_E"].iloc[i], df["y_E"].iloc[i]]])
-        M.set_offsets([[df["x_M"].iloc[i], df["y_M"].iloc[i]]])
-        J.set_offsets([[df["x_J"].iloc[i], df["y_J"].iloc[i]]])
-        S.set_offsets([[df["x_S"].iloc[i], df["y_S"].iloc[i]]])
-
-        # Connectors
-        lineEM.set_data([df["x_E"].iloc[i], df["x_M"].iloc[i]], [df["y_E"].iloc[i], df["y_M"].iloc[i]])
-        lineEJ.set_data([df["x_E"].iloc[i], df["x_J"].iloc[i]], [df["y_E"].iloc[i], df["y_J"].iloc[i]])
-        lineES.set_data([df["x_E"].iloc[i], df["x_S"].iloc[i]], [df["y_E"].iloc[i], df["y_S"].iloc[i]])
-
-        if SHOW_SOLAR_GLARE_MASK:
-            style_connector(lineEJ, float(df["jup_elong_deg"].iloc[i]))
-            style_connector(lineEM, float(df["mars_elong_deg"].iloc[i]))
-            style_connector(lineES, float(df["sat_elong_deg"].iloc[i]))
-
-        # Readout + view limits + legend
-        txt.set_text(make_readout_text(i))
-        apply_planet_visibility()
-        set_view_limits()
-
-        # Fig2 cursor
-        vline.set_xdata([days.iloc[i], days.iloc[i]])
-
-        fig1.canvas.draw_idle()
-        fig2.canvas.draw_idle()
-
-    """
-
-    #slider.on_changed(update)
-    """
     slider.on_changed(
         lambda val: update(
             val,
             MAX_IDX,
             df,
-            days,
-            markers,
-            connectors,
-            txt,
-            vline,
-            fig1,
-            fig2,
-        )
-    )
-    """
-
-    slider.on_changed(
-        lambda val: update(
-            val,
-            MAX_IDX,
-            df,
+            dates,
             days,
             E, M, J, S,
             lineEM, lineEJ, lineES,
@@ -291,8 +217,8 @@ def main():
             fig2,
             ax1,
             planet_enabled,
-            style_connector
-            
+            style_connector,
+            planet_artists          
         )
     )
 
@@ -316,7 +242,6 @@ def main():
     apply_planet_visibility(planet_artists, planet_enabled, ax1)
 
     plt.show()
-
 
 if __name__ == "__main__":
     main()

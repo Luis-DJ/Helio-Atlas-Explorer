@@ -26,6 +26,7 @@ def update(
     val,
     MAX_IDX,
     df,
+    dates,
     days,
     E, M, J, S,
     lineEM, lineEJ, lineES,
@@ -35,7 +36,8 @@ def update(
     fig2,
     ax1,
     planet_enabled,
-    style_connector
+    style_connector,
+    planet_artists
 ):
 
 
@@ -59,8 +61,8 @@ def update(
         style_connector(lineES, float(df["sat_elong_deg"].iloc[i]))
 
     # Readout + view limits + legend
-    txt.set_text(make_readout_text(i))
-    apply_planet_visibility()
+    txt.set_text(make_readout_text(i, dates, planet_enabled, df))
+    apply_planet_visibility(planet_artists, planet_enabled, ax1)
     set_view_limits(ax1,planet_enabled)
 
     # Fig2 cursor
@@ -68,4 +70,3 @@ def update(
 
     fig1.canvas.draw_idle()
     fig2.canvas.draw_idle()
-
