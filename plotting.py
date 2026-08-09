@@ -294,8 +294,9 @@ def draw_connectors(ax, df, _reg, i0):
 
 
 #Figure 2 construction
+#def build_figure2(planet_enabled, days, df):
 
-def build_figure2(planet_enabled, days, df):
+def build_analysis_figure(planet_enabled, days, df):
 
 
     fig2, ax2 = plt.subplots(figsize=(12.5, 4.8), num=f"{APP_NAME} {APP_VERSION} — Ranges & Elongation")
@@ -347,3 +348,56 @@ def build_figure2(planet_enabled, days, df):
         ax2b.axhline(float(GLARE_SHADE_BELOW_DEG), color=GLARE_SHADE_COLOR, lw=1.0, alpha=0.35)
 
     return fig2, ax2, ax2b
+
+"""
+def update(
+    val,
+    MAX_IDX,
+    df,
+    days,
+    E, M, J, S,
+    lineEM, lineEJ, lineES,
+    txt,
+    vline,
+    fig1,
+    fig2,
+):
+
+
+    i = int(val)
+    i = max(0, min(MAX_IDX, i))
+
+    # Markers
+    E.set_offsets([[df["x_E"].iloc[i], df["y_E"].iloc[i]]])
+    M.set_offsets([[df["x_M"].iloc[i], df["y_M"].iloc[i]]])
+    J.set_offsets([[df["x_J"].iloc[i], df["y_J"].iloc[i]]])
+    S.set_offsets([[df["x_S"].iloc[i], df["y_S"].iloc[i]]])
+
+    # Connectors
+    lineEM.set_data([df["x_E"].iloc[i], df["x_M"].iloc[i]], [df["y_E"].iloc[i], df["y_M"].iloc[i]])
+    lineEJ.set_data([df["x_E"].iloc[i], df["x_J"].iloc[i]], [df["y_E"].iloc[i], df["y_J"].iloc[i]])
+    lineES.set_data([df["x_E"].iloc[i], df["x_S"].iloc[i]], [df["y_E"].iloc[i], df["y_S"].iloc[i]])
+
+    if SHOW_SOLAR_GLARE_MASK:
+        style_connector(lineEJ, float(df["jup_elong_deg"].iloc[i]))
+        style_connector(lineEM, float(df["mars_elong_deg"].iloc[i]))
+        style_connector(lineES, float(df["sat_elong_deg"].iloc[i]))
+
+    # Readout + view limits + legend
+    txt.set_text(make_readout_text(i))
+    apply_planet_visibility()
+    set_view_limits()
+
+    # Fig2 cursor
+    vline.set_xdata([days.iloc[i], days.iloc[i]])
+
+    fig1.canvas.draw_idle()
+    fig2.canvas.draw_idle()
+
+"""
+
+def set_view_limits(ax1, planet_enabled):
+    lim = compute_view_lim(planet_enabled)
+    ax1.set_xlim(-lim, lim)
+    ax1.set_ylim(-lim, lim)
+     

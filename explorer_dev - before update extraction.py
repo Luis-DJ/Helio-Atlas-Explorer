@@ -64,17 +64,12 @@ from plotting import (
     draw_events,
     draw_connectors,
     compute_view_lim,
-    build_analysis_figure,
-    set_view_limits
-    )
-
-from ui import(apply_planet_visibility, update)
-
+    build_analysis_figure)
 
 #    build_figure2)
 # -------------------- Plot + slider --------------------
 def main():
-
+    
     df = build_dataset()
     df["t"] = ensure_utc(df["t"])
     MAX_IDX = len(df) - 1
@@ -121,8 +116,6 @@ def main():
 
     refresh_legend(ax1)
 
-
-    """
     def apply_planet_visibility():
         for planet, artists in planet_artists.items():
             enabled = planet_enabled.get(planet, True)
@@ -136,14 +129,12 @@ def main():
                 except Exception:
                     pass
         refresh_legend(ax1)
-    """
 
-    """
     def set_view_limits():
         lim = compute_view_lim(planet_enabled)
         ax1.set_xlim(-lim, lim)
         ax1.set_ylim(-lim, lim)
-    """
+     
 
     theta = np.linspace(0, 2*np.pi, 1200)
 
@@ -184,7 +175,7 @@ def main():
 
     ax1.set_aspect("equal")
 
-    set_view_limits(ax1, planet_enabled)
+    set_view_limits()
 
     ax1.set_xlabel("x (AU)", color="white")
     ax1.set_ylabel("y (AU)", color="white")
@@ -225,7 +216,6 @@ def main():
     btn_ax = fig1.add_axes([0.90, 0.05, 0.08, 0.05])
     btn = Button(btn_ax, "Reset")
 
-    """
     def update(val):
         i = int(val)
         i = max(0, min(MAX_IDX, i))
@@ -257,44 +247,7 @@ def main():
         fig1.canvas.draw_idle()
         fig2.canvas.draw_idle()
 
-    """
-
-    #slider.on_changed(update)
-    """
-    slider.on_changed(
-        lambda val: update(
-            val,
-            MAX_IDX,
-            df,
-            days,
-            markers,
-            connectors,
-            txt,
-            vline,
-            fig1,
-            fig2,
-        )
-    )
-    """
-
-    slider.on_changed(
-        lambda val: update(
-            val,
-            MAX_IDX,
-            df,
-            days,
-            E, M, J, S,
-            lineEM, lineEJ, lineES,
-            txt,
-            vline,
-            fig1,
-            fig2,
-            ax1,
-            planet_enabled,
-            style_connector
-            
-        )
-    )
+    slider.on_changed(update)
 
     def reset_view(_):
         slider.set_val(i0)
@@ -313,7 +266,7 @@ def main():
     fig2.canvas.mpl_connect("key_press_event", key_press)
 
     # Apply visibility once on startup
-    apply_planet_visibility(planet_artists, planet_enabled, ax1)
+    apply_planet_visibility()
 
     plt.show()
 
