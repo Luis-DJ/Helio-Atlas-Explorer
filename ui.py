@@ -22,6 +22,17 @@ def apply_planet_visibility(planet_artists, planet_enabled, ax1):
     refresh_legend(ax1)
 
 
+def reset_view(_, slider, i0):
+    slider.set_val(i0)
+
+def key_press(event, slider, max_idx):
+    current_val = int(slider.val)
+
+    if event.key == "right":
+        slider.set_val(min(max_idx, current_val + 1))
+    elif event.key == "left":
+        slider.set_val(max(0, current_val - 1))    
+
 def update(
     val,
     MAX_IDX,

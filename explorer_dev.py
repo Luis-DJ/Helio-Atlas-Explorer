@@ -68,7 +68,10 @@ from plotting import (
     register_artists
     )
 
-from ui import(apply_planet_visibility, update)
+from ui import(apply_planet_visibility, 
+               update,
+               reset_view,
+               key_press)
 
 #    build_figure2)
 # -------------------- Plot + slider --------------------
@@ -105,20 +108,6 @@ def main():
         "Saturn": bool(SHOW_PLANET_SATURN),
     }
 
-    """
-    def _reg(planet: str, *artists):
-        if planet not in planet_artists:
-            planet_artists[planet] = []
-        for a in artists:
-            if a is None:
-                continue
-            if isinstance(a, (list, tuple)):
-                for aa in a:
-                    if aa is not None:
-                        planet_artists[planet].append(aa)
-            else:
-                planet_artists[planet].append(a)
-    """
 
     refresh_legend(ax1)
 
@@ -222,21 +211,39 @@ def main():
         )
     )
 
+    """
     def reset_view(_):
         slider.set_val(i0)
 
     btn.on_clicked(reset_view)
+    """
+
+    btn.on_clicked(lambda event: reset_view(event, slider, i0))
 
     # Keyboard stepping
+    """
     def key_press(event):
         current_val = int(slider.val)
         if event.key == "right":
             slider.set_val(min(MAX_IDX, current_val + 1))
         elif event.key == "left":
             slider.set_val(max(0, current_val - 1))
-
+    """
+    """
     fig1.canvas.mpl_connect("key_press_event", key_press)
     fig2.canvas.mpl_connect("key_press_event", key_press)
+    """
+
+
+    fig1.canvas.mpl_connect(
+        "key_press_event",
+        lambda event: key_press(event, slider, MAX_IDX)
+    )
+
+    fig2.canvas.mpl_connect(
+        "key_press_event",
+        lambda event: key_press(event, slider, MAX_IDX)
+    )
 
     # Apply visibility once on startup
     apply_planet_visibility(planet_artists, planet_enabled, ax1)
