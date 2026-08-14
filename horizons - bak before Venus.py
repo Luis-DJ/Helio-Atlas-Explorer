@@ -12,6 +12,9 @@ from geometry import (
     angle_deg_vectorized,
 )
 
+
+
+
 def fetch_heliocentric_xyz_majorbody(naif_id: str) -> pd.DataFrame:
     obj = Horizons(id=str(naif_id), id_type="majorbody", location="@sun",
                    epochs={"start": START, "stop": STOP, "step": STEP})
@@ -46,14 +49,13 @@ def build_dataset() -> pd.DataFrame:
         out.rename(columns={f"t{suffix}": "t"}, inplace=True)
         return out
 
-    aV = asof_align(base, venus_hc, "_V")
+    aE = asof_align(base, venus_hc, "_V")
     aE = asof_align(base, earth_hc, "_E")
     aJ = asof_align(base, jupiter_hc, "_J")
     aM = asof_align(base, mars_hc, "_M")
     aS = asof_align(base, saturn_hc, "_S")
 
-    #df = aE.merge(aJ, on="t").merge(aM, on="t").merge(aS, on="t").dropna().reset_index(drop=True)
-    df = aE.merge(aV, on="t").merge(aJ, on="t").merge(aM, on="t").merge(aS, on="t").dropna().reset_index(drop=True)
+    df = aE.merge(aJ, on="t").merge(aM, on="t").merge(aS, on="t").dropna().reset_index(drop=True)
 
     # Distances (Earth->planet)
     df["earth_venus_range_AU"]   = np.sqrt((df["x_V"] - df["x_E"])**2 + (df["y_V"] - df["y_E"])**2 + (df["z_V"] - df["z_E"])**2)

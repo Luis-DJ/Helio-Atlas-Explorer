@@ -112,41 +112,58 @@ def main():
         "Saturn": bool(SHOW_PLANET_SATURN),
     }
 
+
     refresh_legend(ax1)
 
     theta = np.linspace(0, 2*np.pi, 1200)
 
-    # Guide orbits (only for enabled planets) # Index 0
-    draw_guide_orbits(ax1, theta, planet_enabled, planet_artists)  
+    # Guide orbits (only for enabled planets)
+    
+    draw_guide_orbits(ax1, theta, planet_enabled, planet_artists)
 
     # Sun
+
     draw_sun(ax1)
+    
+    # Tracks
 
-    # Tracks, Index 1
-    draw_planet_tracks(ax1, df, planet_enabled, planet_artists) 
+    draw_planet_tracks(ax1, df, planet_artists)
 
-    # Current markers 2
-    blue_dot_marker = draw_current_markers(ax1, df, i0, planet_enabled, planet_artists)
+    # Current markers
+    V, E, M, J, S = draw_current_markers(ax1, df, i0, planet_artists)
+    
+    # Connectors
 
-    # Connectors, Index 3
-    draw_connectors(ax1, df, planet_enabled, planet_artists, i0)
+    lineEV, lineEM, lineEJ, lineES = draw_connectors(ax1, df, planet_artists, i0)
 
-    # Draw events
+    register_artists(planet_artists, "Venus", lineEV)
 
-    if planet_enabled["Venus"]:
-        draw_events(ax1, df, planet_artists, "Venus",    "x_V", "y_V", v_opp, v_conj, size=EVENT_SIZE*0.85, fs=7.5)        
+    register_artists(planet_artists, "Mars", lineEM)
+    register_artists(planet_artists, "Jupiter", lineEJ)
+    register_artists(planet_artists, "Saturn", lineES)
 
-    if planet_enabled["Mars"]:
-        draw_events(ax1, df, planet_artists, "Mars",    "x_M", "y_M", m_opp, m_conj, size=EVENT_SIZE*0.85, fs=7.5)
 
-    if planet_enabled["Jupiter"]:
-        draw_events(ax1, df, planet_artists, "Jupiter", "x_J", "y_J", j_opp, j_conj, size=EVENT_SIZE*0.85, fs=7.5)
+    if SHOW_SOLAR_GLARE_MASK:
 
-    if planet_enabled["Saturn"]:
-        draw_events(ax1, df, planet_artists, "Saturn",  "x_S", "y_S", s_opp, s_conj, size=EVENT_SIZE*0.85, fs=7.5)  
+        style_connector(lineEV, float(df["venus_elong_deg"].iloc[i0]))
 
+        style_connector(lineEJ, float(df["jup_elong_deg"].iloc[i0]))
+        style_connector(lineEM, float(df["mars_elong_deg"].iloc[i0]))
+        style_connector(lineES, float(df["sat_elong_deg"].iloc[i0]))
+
+    # Events (rings + optional labels), all registered to the correct planet
+                
+    # Jupiter full-size; Mars slightly smaller; Saturn full-size
+
+    draw_events(ax1, df, planet_artists, "Venus",    "x_V", "y_V", v_opp, v_conj, size=EVENT_SIZE*0.85, fs=7.5)
+
+    draw_events(ax1, df, planet_artists, "Jupiter", "x_J", "y_J", j_opp, j_conj, size=EVENT_SIZE, fs=8)
+    draw_events(ax1, df, planet_artists, "Mars",    "x_M", "y_M", m_opp, m_conj, size=EVENT_SIZE*0.85, fs=7.5)
+    draw_events(ax1, df, planet_artists, "Saturn",  "x_S", "y_S", s_opp, s_conj, size=EVENT_SIZE, fs=8)
 
     ax1.set_aspect("equal")
+
+    set_view_limits(ax1, planet_enabled)
 
     ax1.set_xlabel("x (AU)", color="white")
     ax1.set_ylabel("y (AU)", color="white")
@@ -160,10 +177,7 @@ def main():
         transform=ax1.transAxes, va="top", ha="right",
         fontsize=9, family="monospace", color="white",
         bbox=dict(boxstyle="round", facecolor="black", alpha=0.85, lw=0.5, edgecolor="white")
-        )
-
-    print (txt)
-
+    )
 
     # ---------- FIG 2: Range + Elongation ----------
 
@@ -197,11 +211,15 @@ def main():
             df,
             dates,
             days,
+            V,E, M, J, S,
+            lineEV,lineEM, lineEJ, lineES,
             txt,
+            vline,
             fig1,
+            fig2,
             ax1,
-            blue_dot_marker,
             planet_enabled,
+            style_connector,
             planet_artists          
         )
     )

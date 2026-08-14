@@ -3,9 +3,7 @@ from config import *
 
 from plotting import (set_view_limits,
                       refresh_legend, 
-                      make_readout_text,
-                      style_connector
-                      )
+                      make_readout_text)
 
 
 
@@ -35,7 +33,7 @@ def key_press(event, slider, max_idx):
     elif event.key == "left":
         slider.set_val(max(0, current_val - 1))    
 
-def update_OLD(
+def update(
     val,
     MAX_IDX,
     df,
@@ -90,61 +88,3 @@ def update_OLD(
 
     fig1.canvas.draw_idle()
     fig2.canvas.draw_idle()
-
-
-def update(
-    val,
-    MAX_IDX,
-    df,
-    dates,
-    days,
-    txt,
-    fig1,
-    ax1,
-    blue_dot_marker,
-    planet_enabled,
-    planet_artists
-):
-
-
-    
-    i = int(val)
-    i = max(0, min(MAX_IDX, i))
-
-    
-    # Markers
-
-    blue_dot_marker.set_offsets([[df["x_E"].iloc[i], df["y_E"].iloc[i]]])
-
-    #redraw marker and connectors (inc style) for enabled planets only
-    # markers are index 2 in  planet artists
-    # connectors are are index 3 in planet artists
-    
-    if planet_enabled["Venus"]:
-
-        planet_artists["Venus"][2].set_offsets([[df["x_V"].iloc[i], df["y_V"].iloc[i]]])
-        planet_artists["Venus"][3].set_data([df["x_E"].iloc[i], df["x_V"].iloc[i]], [df["y_E"].iloc[i], df["y_V"].iloc[i]])
-        style_connector("Venus" , planet_artists["Venus"][3], float(df["venus_elong_deg"].iloc[i]))
-
-    if planet_enabled["Mars"]:
-        planet_artists["Mars"][2].set_offsets([[df["x_M"].iloc[i], df["y_M"].iloc[i]]])
-        planet_artists["Mars"][3].set_data([df["x_E"].iloc[i], df["x_M"].iloc[i]], [df["y_E"].iloc[i], df["y_M"].iloc[i]])
-        style_connector("Mars", planet_artists["Mars"][3], float(df["mars_elong_deg"].iloc[i]))
- 
-    if planet_enabled["Jupiter"]:
-        planet_artists["Jupiter"][2].set_offsets([[df["x_J"].iloc[i], df["y_J"].iloc[i]]])
-        planet_artists["Jupiter"][3].set_data([df["x_E"].iloc[i], df["x_J"].iloc[i]], [df["y_E"].iloc[i], df["y_J"].iloc[i]])
-        style_connector("Jupiter", planet_artists["Jupiter"][3], float(df["jup_elong_deg"].iloc[i])) 
-        
-    if planet_enabled["Saturn"]:
-        planet_artists["Saturn"][2].set_offsets([[df["x_S"].iloc[i], df["y_S"].iloc[i]]])
-        planet_artists["Saturn"][3].set_data([df["x_E"].iloc[i], df["x_S"].iloc[i]], [df["y_E"].iloc[i], df["y_S"].iloc[i]])
-        style_connector("Saturn",planet_artists["Saturn"][3], float(df["sat_elong_deg"].iloc[i]))
-
-    # Readout + view limits + legend
-    txt.set_text(make_readout_text(i, dates, planet_enabled, df))
-   # apply_planet_visibility(planet_artists, planet_enabled, ax1)
-   # set_view_limits(ax1,planet_enabled)
-
-
-    fig1.canvas.draw_idle()    
